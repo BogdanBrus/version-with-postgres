@@ -1,0 +1,111 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:lang="http://www.springframework.org/schema/lang"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util"
+
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.3.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+        http://www.springframework.org/schema/context  http://www.springframework.org/schema/context/spring-context-4.3.xsd
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+        http://www.springframework.org/schema/security  http://www.springframework.org/schema/security/spring-security.xsd
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.3.xsd
+        http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang-4.3.xsd
+        http://www.springframework.org/schema/p http://www.springframework.org/schema/p.xsd
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd
+        ">
+
+	<!-- START SPRING MVC -->
+	<!-- package for scan controllers and inject -->
+	<context:component-scan base-package="org.mvcedit" />
+	<context:annotation-config /> <!-- <<-add->> -->
+	<!-- search View -->
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<property name="viewClass"
+			value="org.springframework.web.servlet.view.JstlView" />
+		<property name="prefix" value="/WEB-INF/jsp/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+	
+
+	<mvc:annotation-driven /><!-- enable anot mvc -->
+	<context:property-placeholder location="classpath:application.properties" /><!-- 
+		put file with parameters -->
+
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="packagesToScan" value="org.mvcedit.models" />    <!-- Class = Table -->
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.hbm2ddl.auto">update</prop>
+				<prop key="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</prop>
+				<prop key="hibernate.show sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+	<tx:annotation-driven transaction-manager="txManager" />
+	<bean id="txManager"
+		class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+
+	<bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource"
+		destroy-method="close">
+		<property name="driverClassName" value="org.postgresql.Driver" />
+		<property name="url" value="${db.url}" />
+		<property name="username" value="${db.username}" />
+		<property name="password" value="${db.password}" />
+	</bean>
+
+	<!-- END SPRING MVC -->
+
+
+	<!-- START SPRING SECURITY -->
+	<security:http pattern="/css/**" security="none" />
+	<security:http pattern="/images/**" security="none" />
+	<security:http pattern="/js/**" security="none" />
+	<security:http pattern="/log/**" security="none" />
+	
+	
+	<security:http auto-config="true" use-expressions="true" > 
+    <security:access-denied-handler error-page="/access-denied"/> <!--ACCES DENIED PAGE-->
+		<security:form-login login-page="/login"
+			login-processing-url="/login" username-parameter="username"
+			password-parameter="password" default-target-url="/home"
+			always-use-default-target="true" authentication-failure-url="/login.jsp?error=invalidLoginPassword" 
+		/>
+
+		<security:intercept-url pattern="/home"
+			access="isAuthenticated()" />
+		<security:intercept-url pattern="/hello"
+			access="permitAll" />
+		<security:intercept-url pattern="/test.in"
+			access="hasRole('ADMIN')" />
+
+		<security:logout logout-url="/logout" />
+		<security:remember-me user-service-ref="serviceUser"
+			key="lesson_key" /> <!-- ServiceUser - class for realization UserDetailsService -->
+			
+	</security:http>
+	
+	 
+	<security:authentication-manager>
+		<security:authentication-provider
+			user-service-ref="serviceUser">
+			<security:password-encoder ref="passwordHelper" />
+		</security:authentication-provider>
+	</security:authentication-manager>
+
+	<!-- Check and work with role -->
+	<bean id="roleVoter" class="org.springframework.security.access.vote.RoleVoter">
+		<property name="rolePrefix" value="" />
+	</bean>
+
+</beans>
